@@ -1,0 +1,17 @@
+#@data/values
+---
+steps:
+- opsmanager:
+    version: 2.7.0
+- tile:
+    slug: example
+    version: 2.7.0
+- opsmanager:
+    version: 2.7.*
+- opsmanager:
+    version: 2.10.0
+- opsmanager:
+    version: 2.10.*
+deployments:
+- name: ci-support
+  iaas: gcp
