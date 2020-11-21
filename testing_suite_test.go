@@ -68,6 +68,15 @@ func path(stdout *gbytes.Buffer, lookup string) []byte {
 }
 
 var _ = Describe("When providing a configuration", func() {
+	When("no config file is provided", func() {
+		It("fails with an error message", func() {
+			session, stdout, stderr := run(binPath)
+
+			Eventually(session).Should(gexec.Exit(1))
+			Expect(string(stdout.Contents())).To(Equal(""))
+			Expect(string(stderr.Contents())).To(ContainSubstring("--config is required"))
+		})
+	})
 	When("the step is OpsManager", func() {
 		It("includes the resource", func() {
 			session, stdout, _ := run(

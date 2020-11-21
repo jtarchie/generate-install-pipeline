@@ -24,6 +24,10 @@ func execute() error {
 	configFilename := flag.String("config", "", "pipeline file that describes the pipeline to build")
 	flag.Parse()
 
+	if *configFilename == "" {
+		return fmt.Errorf("--config is required")
+	}
+
 	payload := config.Payload{}
 
 	err := parseYAML(*configFilename, &payload)
