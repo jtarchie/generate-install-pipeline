@@ -169,17 +169,17 @@ type: git
 		})
 	})
 
-	When("using the fixtures", func() {
+	When("using the examples", func() {
 		It("ensures they are all valid", func() {
-			fixtures, err := filepath.Glob("fixtures/*.yml")
+			examples, err := filepath.Glob("examples/*.yml")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(len(fixtures)).To(BeNumerically(">", 0))
+			Expect(len(examples)).To(BeNumerically(">", 0))
 
-			for _, fixture := range fixtures {
+			for _, example := range examples {
 				session, _, _ := run(
 					binPath,
-					"--config", fixture,
+					"--config", example,
 				)
 				Eventually(session).Should(gexec.Exit(0))
 			}
