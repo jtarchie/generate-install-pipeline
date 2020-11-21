@@ -1,7 +1,9 @@
 package config
 
 type Deployment struct {
-	Name string `yaml:"name"`
-	IAAS string `yaml:"iaas"`
+	URI          string `yaml:"uri"`
+	Environments []struct {
+		Name string `yaml:"name"`
+		IAAS string `yaml:"iaas"`
+	} `yaml:"environments"`
 }
-type Deployments []Deployment

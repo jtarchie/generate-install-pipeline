@@ -1,6 +1,6 @@
 package config
 
 type Payload struct {
-	Steps       Steps       `yaml:"steps"`
-	Deployments Deployments `yaml:"deployments"`
+	Steps      Steps      `yaml:"steps"`
+	Deployment Deployment `yaml:"deployment"`
 }

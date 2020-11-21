@@ -12,6 +12,8 @@ steps:
     version: 2.10.0
 - opsmanager:
     version: 2.10.*
-deployments:
-- name: ci-support
-  iaas: gcp
+deployment:
+  uri: git@github.com:pivotal/platform-automation-deployments
+  environments:
+  - name: ci-support
+    iaas: gcp

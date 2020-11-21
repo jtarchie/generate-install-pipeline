@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -123,6 +124,51 @@ type: pivnet
 
 			By("declaring it in the job")
 			Expect(path(stdout, "/jobs/name=build/plan/get=tile-elastic-runtime-2.0.0")).To(MatchYAML(`get: tile-elastic-runtime-2.0.0`))
+		})
+	})
+
+	When("loading default resources", func() {
+		It("has paving and platform automation", func() {
+			session, stdout, _ := run(
+				binPath,
+				"--config",
+				writeFile(``),
+			)
+
+			Eventually(session).Should(gexec.Exit(0))
+			Expect(path(stdout, "/resources/name=platform-automation")).To(MatchYAML(`
+name: platform-automation
+source:
+  api_token: ((pivnet.api_token))
+  product_slug: platform-automation
+  product_version: \.*
+type: pivnet
+`))
+			Expect(path(stdout, "/jobs/name=build/plan/get=platform-automation")).To(MatchYAML(`get: platform-automation`))
+			Expect(path(stdout, "/resources/name=paving")).To(MatchYAML(`
+name: paving
+source:
+  uri: https://github.com/pivotal/paving
+type: git
+`))
+			Expect(path(stdout, "/jobs/name=build/plan/get=paving")).To(MatchYAML(`get: paving`))
+		})
+	})
+
+	When("using the fixtures", func() {
+		It("ensures they are all valid", func() {
+			fixtures, err := filepath.Glob("fixtures/*.yml")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(len(fixtures)).To(BeNumerically(">", 0))
+
+			for _, fixture := range fixtures {
+				session, _, _ := run(
+					binPath,
+					"--config", fixture,
+				)
+				Eventually(session).Should(gexec.Exit(0))
+			}
 		})
 	})
 })
