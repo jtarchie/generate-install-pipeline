@@ -146,8 +146,8 @@ type: pivnet
 			)
 
 			Eventually(session).Should(gexec.Exit(0))
-			Expect(path(stdout, "/resources/name=platform-automation-image")).To(MatchYAML(`
-name: platform-automation-image
+			Expect(path(stdout, "/resources/name=platform-automation")).To(MatchYAML(`
+name: platform-automation
 source:
   api_token: ((pivnet.api_token))
   product_slug: platform-automation
@@ -156,8 +156,17 @@ type: pivnet
 `))
 			Expect(path(stdout, "/jobs/name=build/plan/get=platform-automation-image")).To(MatchYAML(`
 get: platform-automation-image
+resource: platform-automation
 params:
   globs: ['*image*.tgz']
+  unpack: true
+`))
+			Expect(path(stdout, "/jobs/name=build/plan/get=platform-automation-tasks")).To(MatchYAML(`
+get: platform-automation-tasks
+resource: platform-automation
+params:
+  globs: ['*tasks*.zip']
+  unpack: true
 `))
 			Expect(path(stdout, "/resources/name=paving")).To(MatchYAML(`
 name: paving

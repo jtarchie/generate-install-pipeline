@@ -12,6 +12,7 @@ type PivnetResource struct {
 	Slug    string
 	Version string
 	Globs   []string
+	Unpack  bool
 }
 
 func (p PivnetResource) AsResourceConfig() atc.ResourceConfig {
@@ -34,8 +35,16 @@ func (p PivnetResource) AsGetStep() atc.Step {
 		Params: map[string]interface{}{},
 	}
 
+	if p.Alias != "" {
+		step.Resource = p.Alias
+	}
+
 	if len(p.Globs) > 0 {
 		step.Params["globs"] = p.Globs
+	}
+
+	if p.Unpack {
+		step.Params["unpack"] = true
 	}
 
 	return atc.Step{

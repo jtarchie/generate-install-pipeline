@@ -36,10 +36,31 @@ func (p *Creator) setupDefaultResources() {
 
 func (p Creator) platformAutomationResource() resources.PivnetResource {
 	return resources.PivnetResource{
-		Resource: resources.Resource{Name: "platform-automation-image"},
+		Resource: resources.Resource{Name: "platform-automation"},
 		Slug:     "platform-automation",
 		Version:  ".*",
-		Globs:    []string{"*image*.tgz"},
+	}
+}
+
+func (p Creator) platformAutomationImageResource() resources.PivnetResource {
+	return resources.PivnetResource{
+		Resource: resources.Resource{
+			Name:  "platform-automation-image",
+			Alias: "platform-automation",
+		},
+		Globs:  []string{"*image*.tgz"},
+		Unpack: true,
+	}
+}
+
+func (p Creator) platformAutomationTasksResource() resources.PivnetResource {
+	return resources.PivnetResource{
+		Resource: resources.Resource{
+			Name:  "platform-automation-tasks",
+			Alias: "platform-automation",
+		},
+		Globs:  []string{"*tasks*.zip"},
+		Unpack: true,
 	}
 }
 
@@ -69,7 +90,8 @@ func (p *Creator) setupJobDefaultGets() {
 	p.config.Jobs[0].PlanSequence = append(p.config.Jobs[0].PlanSequence,
 		p.deploymentResource().AsGetStep(),
 		p.pavingResource().AsGetStep(),
-		p.platformAutomationResource().AsGetStep(),
+		p.platformAutomationImageResource().AsGetStep(),
+		p.platformAutomationTasksResource().AsGetStep(),
 	)
 }
 
@@ -91,6 +113,12 @@ func (p *Creator) AsPipeline() atc.Config {
 	return p.config
 }
 
+func (p *Creator) setupTasks() {
+	//p.config.Jobs[0].PlanSequence = append(
+	//	p.config.Jobs[0].PlanSequence,
+	//)
+}
+
 func NewCreator(c config.Payload) *Creator {
 	p := Creator{
 		payload: c,
@@ -99,6 +127,7 @@ func NewCreator(c config.Payload) *Creator {
 	p.setupDefaultResources()
 	p.setupJobDefaultGets()
 	p.setupSteps()
+	p.setupTasks()
 
 	return &p
 }
