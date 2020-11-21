@@ -36,7 +36,11 @@ func execute() error {
 		return fmt.Errorf("could not read payload: %w", err)
 	}
 
-	creator := pipeline.NewCreator(payload)
+	creator, err := pipeline.NewCreator(payload)
+	if err != nil {
+		return fmt.Errorf("could not create pipeline struct: %w", err)
+	}
+
 	pipeline := creator.AsPipeline()
 
 	contents, err := yaml.Marshal(pipeline)

@@ -58,14 +58,14 @@ func writeFile(contents string) string {
 	return file.Name()
 }
 
-func path(stdout *gbytes.Buffer, lookup string) []byte {
+func path(stdout *gbytes.Buffer, lookup string) string {
 	bytes, err := interpolate.Execute(interpolate.Options{
 		TemplateFile: writeFile(string(stdout.Contents())),
 		Path:         lookup,
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	return bytes
+	return string(bytes)
 }
 
 var _ = Describe("When providing a configuration", func() {
@@ -213,6 +213,26 @@ source:
 type: git
 `))
 			Expect(path(stdout, "/jobs/name=build/plan/get=deployments")).To(MatchYAML(`get: deployments`))
+		})
+	})
+
+	When("upgrading an OpsManager", func() {
+		It("includes one creates infrastructure, create-vm, export-installation, and upgrade-opsman", func() {
+			session, stdout, _ := run(
+				binPath,
+				"--config",
+				writeFile(`
+steps:
+- opsmanager:
+    version: 2.0.0
+- opsmanager:
+    version: 2.0.1
+`),
+			)
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			Expect(path(stdout, "/jobs/name=build/plan/task=create-infrastructure/config/platform")).To(Equal("linux\n"))
 		})
 	})
 })

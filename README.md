@@ -10,6 +10,13 @@ Just extracted into a YAML generator, based on a config file.
 go run main.go -config config.yml
 ```
 
+If you are going to build a binary, this uses [`packr`](https://github.com/gobuffalo/packr/tree/master/v2) to manage assets.
+
+```bash
+go generate ./...
+go build -o generate-install-pipeline
+```
+
 Please see `examples/` for actual examples.
 
 ## Pipeline design

@@ -1,1 +1,5 @@
 .idea
+packrd
+*-packr.go
+
+generate-install-pipeline

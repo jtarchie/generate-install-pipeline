@@ -1,9 +1,13 @@
 package pipeline
 
 import (
+	"fmt"
+
 	"github.com/concourse/concourse/atc"
+	"github.com/gobuffalo/packr/v2"
 	"github.com/jtarchie/generate-install-pipeline/config"
 	"github.com/jtarchie/generate-install-pipeline/resources"
+	"sigs.k8s.io/yaml"
 )
 
 type Creator struct {
@@ -95,12 +99,16 @@ func (p *Creator) setupJobDefaultGets() {
 	)
 }
 
+func (p *Creator) addStepToJob(step atc.Step) {
+	p.config.Jobs[0].PlanSequence = append(
+		p.config.Jobs[0].PlanSequence,
+		step,
+	)
+}
+
 func (p *Creator) setupSteps() {
 	for _, step := range p.payload.Steps {
-		p.config.Jobs[0].PlanSequence = append(
-			p.config.Jobs[0].PlanSequence,
-			step.AsPivnetResource().AsGetStep(),
-		)
+		p.addStepToJob(step.AsPivnetResource().AsGetStep())
 
 		p.config.Resources = append(
 			p.config.Resources,
@@ -113,13 +121,42 @@ func (p *Creator) AsPipeline() atc.Config {
 	return p.config
 }
 
-func (p *Creator) setupTasks() {
-	//p.config.Jobs[0].PlanSequence = append(
-	//	p.config.Jobs[0].PlanSequence,
-	//)
+//go:generate go run github.com/gobuffalo/packr/v2/packr2
+func (p *Creator) setupTasks() error {
+	createInfraTask, err := p.getTask("create-infrastructure")
+	if err != nil {
+		return fmt.Errorf("cannot create infrastructure: %w", err)
+	}
+
+	p.addStepToJob(createInfraTask)
+
+	return nil
 }
 
-func NewCreator(c config.Payload) *Creator {
+func (p *Creator) getTask(taskName string) (atc.Step, error) {
+	box := packr.New("tasks", "./tasks")
+	contents, err := box.Find(fmt.Sprintf("%s.yml", taskName))
+	if err != nil {
+		return atc.Step{}, fmt.Errorf("could not load task %s.yml: %w", taskName, err)
+	}
+
+	var taskConfig atc.TaskConfig
+	err = yaml.UnmarshalStrict(contents, &taskConfig)
+
+	if err != nil {
+		return atc.Step{}, fmt.Errorf("could not unmarshal task %s.yml: %w", taskName, err)
+	}
+
+	return atc.Step{
+		Config: &atc.TaskStep{
+			Name:   taskName,
+			Config: &taskConfig,
+		},
+		UnknownFields: nil,
+	}, nil
+}
+
+func NewCreator(c config.Payload) (*Creator, error) {
 	p := Creator{
 		payload: c,
 	}
@@ -127,7 +164,11 @@ func NewCreator(c config.Payload) *Creator {
 	p.setupDefaultResources()
 	p.setupJobDefaultGets()
 	p.setupSteps()
-	p.setupTasks()
 
-	return &p
+	err := p.setupTasks()
+	if err != nil {
+		return nil, fmt.Errorf("could not setup tasks: %w", err)
+	}
+
+	return &p, nil
 }
