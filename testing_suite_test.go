@@ -145,15 +145,19 @@ type: pivnet
 			)
 
 			Eventually(session).Should(gexec.Exit(0))
-			Expect(path(stdout, "/resources/name=platform-automation")).To(MatchYAML(`
-name: platform-automation
+			Expect(path(stdout, "/resources/name=platform-automation-image")).To(MatchYAML(`
+name: platform-automation-image
 source:
   api_token: ((pivnet.api_token))
   product_slug: platform-automation
   product_version: \.*
 type: pivnet
 `))
-			Expect(path(stdout, "/jobs/name=build/plan/get=platform-automation")).To(MatchYAML(`get: platform-automation`))
+			Expect(path(stdout, "/jobs/name=build/plan/get=platform-automation-image")).To(MatchYAML(`
+get: platform-automation-image
+params:
+  globs: ['*image*.tgz']
+`))
 			Expect(path(stdout, "/resources/name=paving")).To(MatchYAML(`
 name: paving
 source:
@@ -178,6 +182,27 @@ type: git
 				)
 				Eventually(session).Should(gexec.Exit(0))
 			}
+		})
+	})
+
+	When("specifying a deployment", func() {
+		It("adds a private key when ssh URI", func() {
+			session, stdout, _ := run(
+				binPath,
+				"--config",
+				writeFile(`deployment: {uri: "git@github.com:user/repo"}`),
+			)
+
+			Eventually(session).Should(gexec.Exit(0))
+
+			Expect(path(stdout, "/resources/name=deployments")).To(MatchYAML(`
+name: deployments
+source:
+  private_key: deployments.private_key
+  uri: git@github.com:user/repo
+type: git
+`))
+			Expect(path(stdout, "/jobs/name=build/plan/get=deployments")).To(MatchYAML(`get: deployments`))
 		})
 	})
 })

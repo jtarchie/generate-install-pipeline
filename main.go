@@ -53,21 +53,17 @@ func execute() error {
 	}
 	deploymentsResource := resources.GitResource{
 		Resource: resources.Resource{Name: "deployments"},
-		URI:      "https://github.com/pivotal/paving",
-	}
-	ciResource := resources.GitResource{
-		Resource: resources.Resource{Name: "docs-platform-automation"},
-		URI:      "https://github.com/pivotal/docs-platform-automation",
+		URI:      payload.Deployment.URI,
 	}
 	platformAutomationResource := resources.PivnetResource{
-		Resource: resources.Resource{Name: "platform-automation"},
+		Resource: resources.Resource{Name: "platform-automation-image"},
 		Slug:     "platform-automation",
 		Version:  ".*",
+		Globs:    []string{"*image*.tgz"},
 	}
 
 	pipeline.Resources = append(
 		pipeline.Resources,
-		ciResource.AsResourceConfig(),
 		deploymentsResource.AsResourceConfig(),
 		pavingResource.AsResourceConfig(),
 		platformAutomationResource.AsResourceConfig(),
@@ -80,7 +76,6 @@ func execute() error {
 	}
 
 	jobConfig.PlanSequence = append(jobConfig.PlanSequence,
-		ciResource.AsGetStep(),
 		deploymentsResource.AsGetStep(),
 		pavingResource.AsGetStep(),
 		platformAutomationResource.AsGetStep(),
