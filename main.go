@@ -3,13 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/concourse/concourse/atc"
-	"github.com/concourse/concourse/atc/configvalidate"
-	"github.com/jtarchie/generate-install-pipeline/config"
-	"github.com/jtarchie/generate-install-pipeline/resources"
 	"io/ioutil"
 	"log"
 	"os"
+
+	"github.com/concourse/concourse/atc"
+	"github.com/concourse/concourse/atc/configvalidate"
+	"github.com/jtarchie/generate-install-pipeline/config"
+	"github.com/jtarchie/generate-install-pipeline/pipeline"
 	"sigs.k8s.io/yaml"
 )
 
@@ -35,67 +36,8 @@ func execute() error {
 		return fmt.Errorf("could not read payload: %w", err)
 	}
 
-	var pipeline atc.Config
-	pipeline.ResourceTypes = append(
-		pipeline.ResourceTypes,
-		atc.ResourceType{
-			Name: "pivnet",
-			Type: "registry-image",
-			Source: map[string]interface{}{
-				"repository": "pivotalcf/pivnet-resource",
-				"tag":        "latest-final",
-			},
-		},
-	)
-	pavingResource := resources.GitResource{
-		Resource: resources.Resource{Name: "paving"},
-		URI:      "https://github.com/pivotal/paving",
-	}
-	deploymentsResource := resources.GitResource{
-		Resource: resources.Resource{Name: "deployments"},
-		URI:      payload.Deployment.URI,
-	}
-	platformAutomationResource := resources.PivnetResource{
-		Resource: resources.Resource{Name: "platform-automation-image"},
-		Slug:     "platform-automation",
-		Version:  ".*",
-		Globs:    []string{"*image*.tgz"},
-	}
-
-	pipeline.Resources = append(
-		pipeline.Resources,
-		deploymentsResource.AsResourceConfig(),
-		pavingResource.AsResourceConfig(),
-		platformAutomationResource.AsResourceConfig(),
-	)
-
-	jobConfig := atc.JobConfig{
-		Name:         "build",
-		Serial:       true,
-		PlanSequence: nil,
-	}
-
-	jobConfig.PlanSequence = append(jobConfig.PlanSequence,
-		deploymentsResource.AsGetStep(),
-		pavingResource.AsGetStep(),
-		platformAutomationResource.AsGetStep(),
-	)
-
-	for _, step := range payload.Steps {
-		jobConfig.PlanSequence = append(
-			jobConfig.PlanSequence,
-			step.AsPivnetResource().AsGetStep(),
-		)
-		pipeline.Resources = append(
-			pipeline.Resources,
-			step.AsResourceConfig(),
-		)
-	}
-
-	pipeline.Jobs = append(
-		pipeline.Jobs,
-		jobConfig,
-	)
+	creator := pipeline.NewCreator(payload)
+	pipeline := creator.AsPipeline()
 
 	contents, err := yaml.Marshal(pipeline)
 	if err != nil {
@@ -104,13 +46,19 @@ func execute() error {
 
 	fmt.Printf("%s\n", contents)
 
+	return displayPipelineWarningsAndErrors(pipeline)
+}
+
+func displayPipelineWarningsAndErrors(pipeline atc.Config) error {
 	warnings, errors := configvalidate.Validate(pipeline)
+
 	if len(warnings) > 0 {
 		_, _ = fmt.Fprintln(os.Stderr, "Warnings: ")
 		for _, msg := range warnings {
 			_, _ = fmt.Fprintf(os.Stderr, "* %s\n", msg)
 		}
 	}
+
 	if len(errors) > 0 {
 		_, _ = fmt.Fprintln(os.Stderr, "Errors: ")
 		for _, msg := range errors {

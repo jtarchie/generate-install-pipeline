@@ -1,8 +1,9 @@
 package resources
 
 import (
-	"github.com/concourse/concourse/atc"
 	"strings"
+
+	"github.com/concourse/concourse/atc"
 )
 
 type PivnetResource struct {
@@ -19,6 +20,7 @@ func (p PivnetResource) AsResourceConfig() atc.ResourceConfig {
 		"product_slug":    p.Slug,
 		"product_version": strings.ReplaceAll(p.Version, ".", "\\."),
 	}
+
 	return atc.ResourceConfig{
 		Name:   p.Name,
 		Type:   "pivnet",
@@ -31,9 +33,11 @@ func (p PivnetResource) AsGetStep() atc.Step {
 		Name:   p.Resource.Name,
 		Params: map[string]interface{}{},
 	}
+
 	if len(p.Globs) > 0 {
 		step.Params["globs"] = p.Globs
 	}
+
 	return atc.Step{
 		Config: &step,
 	}

@@ -1,9 +1,6 @@
 package main_test
 
 import (
-	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
-	"github.com/pivotal-cf/om/interpolate"
 	"io"
 	"io/ioutil"
 	"os/exec"
@@ -12,6 +9,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
+	"github.com/onsi/gomega/gexec"
+	"github.com/pivotal-cf/om/interpolate"
 )
 
 func TestTesting(t *testing.T) {
@@ -19,6 +19,7 @@ func TestTesting(t *testing.T) {
 	RunSpecs(t, "Testing Suite")
 }
 
+//nolint:gochecknoglobals
 var binPath string
 
 var _ = BeforeSuite(func() {

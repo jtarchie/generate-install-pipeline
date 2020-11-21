@@ -2,18 +2,21 @@ package config
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/concourse/concourse/atc"
 	"github.com/jtarchie/generate-install-pipeline/resources"
-	"strings"
 )
 
 type StepOpsManager struct {
 	Version string `yaml:"version"`
 }
+
 type StepTile struct {
 	Slug    string `yaml:"slug"`
 	Version string `yaml:"version"`
 }
+
 type Step struct {
 	OpsManager *StepOpsManager `yaml:"opsmanager"`
 	Tile       *StepTile       `yaml:"tile"`
@@ -21,6 +24,7 @@ type Step struct {
 
 func (s Step) ResourceName() string {
 	name := ""
+
 	switch {
 	case s.OpsManager != nil:
 		name = fmt.Sprintf("opsmanager-%s", s.OpsManager.Version)
@@ -29,6 +33,7 @@ func (s Step) ResourceName() string {
 	}
 
 	name = strings.ReplaceAll(name, "*", "x")
+
 	return name
 }
 

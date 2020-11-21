@@ -2,8 +2,9 @@ package resources
 
 import (
 	"fmt"
-	"github.com/concourse/concourse/atc"
 	"strings"
+
+	"github.com/concourse/concourse/atc"
 )
 
 type GitResource struct {
