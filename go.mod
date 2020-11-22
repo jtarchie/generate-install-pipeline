@@ -10,6 +10,7 @@ require (
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3
 	github.com/pivotal-cf/om v0.0.0-20201119142102-e257289bc731
+	github.com/r3labs/diff/v2 v2.8.0
 	github.com/rogpeppe/go-internal v1.6.2 // indirect
 	github.com/sirupsen/logrus v1.7.0 // indirect
 	golang.org/x/sys v0.0.0-20201119102817-f84b799fce68 // indirect

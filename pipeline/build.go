@@ -121,6 +121,19 @@ func (p *Creator) AsPipeline() atc.Config {
 	return p.config
 }
 
+func (p *Creator) ensurePutDeployments(step atc.Step) atc.Step {
+	return atc.Step{
+		Config: &atc.EnsureStep{
+			Step: step.Config,
+			Hook: atc.Step{
+				Config: &atc.PutStep{
+					Name: "deployments",
+				},
+			},
+		},
+	}
+}
+
 //go:generate go run github.com/gobuffalo/packr/v2/packr2
 func (p *Creator) setupTasks() error {
 	createInfraTask, err := p.getTask("create-infrastructure")
@@ -128,7 +141,14 @@ func (p *Creator) setupTasks() error {
 		return fmt.Errorf("cannot create infrastructure: %w", err)
 	}
 
-	p.addStepToJob(createInfraTask)
+	p.addStepToJob(p.ensurePutDeployments(createInfraTask))
+
+	deleteInfraTask, err := p.getTask("delete-infrastructure")
+	if err != nil {
+		return fmt.Errorf("cannot delete infrastructure: %w", err)
+	}
+
+	p.addStepToJob(p.ensurePutDeployments(deleteInfraTask))
 
 	return nil
 }

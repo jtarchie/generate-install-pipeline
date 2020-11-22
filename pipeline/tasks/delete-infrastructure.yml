@@ -1,0 +1,55 @@
+platform: linux
+image_resource:
+  type: registry-image
+  source:
+    repository: hashicorp/terraform
+inputs:
+- name: deployments
+- name: paving
+outputs:
+- name: deployments
+run:
+  path: bash
+  args:
+  - -c
+  - |
+
+    set -eux
+
+    terraform_path="$PWD"/paving/"$IAAS"
+    deployment_path="$PWD"/deployments/"$DEPLOYMENT_NAME"
+
+    if [ -e "$terraform_path" ]; then
+      echo "Please provide a valid IAAS, the '$IAAS' is not supported"
+      exit 1
+    fi
+
+    if [ -e "$deployment_path" ]; then
+      echo "Please provide a valid DEPLOYMENT_NAME, the '$DEPLOYMENT_NAME' is not supported"
+      exit 1
+    fi
+
+    commit() {
+    cp "$terraform_path"/terraform.tfstate "$deployment_path"
+    pushd "$deployment_path"
+      git config --global user.name "platform-automation-bot"
+      git config --global user.email "$PLATFORM_AUTOMATION_EMAIL"
+      git add terraform.tfstate
+
+      git commit -m "deleted infrastructure for $IAAS" || true
+    popd
+    }
+
+    trap commit EXIT
+
+    cp "$deployment_path"/terraform.tfstate "$terraform_path"
+    cp "$deployment_path"/terraform.tfvars "$terraform_path"
+
+    cd "$terraform_path"
+
+    terraform init
+
+    terraform destroy \
+      -auto-approve \
+      -var-file=terraform.tfvars \
+      -state=terraform.tfstate
