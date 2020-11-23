@@ -29,7 +29,7 @@ var _ = Describe("when using the tasks", func() {
 			scriptFile, err := ioutil.TempFile("", "")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(taskConfig.Run.Path).To(Equal("bash"))
+			Expect(taskConfig.Run.Path).To(Equal("sh"))
 			Expect(taskConfig.Run.Args).To(HaveLen(2))
 
 			_, err = scriptFile.WriteString(taskConfig.Run.Args[1])
@@ -38,7 +38,7 @@ var _ = Describe("when using the tasks", func() {
 			err = scriptFile.Close()
 			Expect(err).NotTo(HaveOccurred())
 
-			session, _, _ := run("shellcheck", "-s", "bash", scriptFile.Name())
+			session, _, _ := run("shellcheck", "-s", "sh", scriptFile.Name())
 			Eventually(session).Should(gexec.Exit(0))
 		}
 	})

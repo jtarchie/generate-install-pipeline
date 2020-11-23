@@ -9,7 +9,7 @@ inputs:
 outputs:
 - name: deployments
 run:
-  path: bash
+  path: sh
   args:
   - -c
   - |
@@ -31,13 +31,12 @@ run:
 
     commit() {
     cp "$terraform_path"/terraform.tfstate "$deployment_path"
-    pushd "$deployment_path"
-      git config --global user.name "platform-automation-bot"
-      git config --global user.email "$PLATFORM_AUTOMATION_EMAIL"
+    cd "$deployment_path"
+      git config --global user.name "pipeline-bot"
+      git config --global user.email "pipeline-bot@example.com"
       git add terraform.tfstate
 
       git commit -m "deleted infrastructure for $IAAS" || true
-    popd
     }
 
     trap commit EXIT

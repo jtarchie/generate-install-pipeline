@@ -4,22 +4,21 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/concourse/concourse/atc"
 	"github.com/jtarchie/generate-install-pipeline/resources"
 )
 
 type StepOpsManager struct {
-	Version string `yaml:"version"`
+	Version string `json:"version"`
 }
 
 type StepTile struct {
-	Slug    string `yaml:"slug"`
-	Version string `yaml:"version"`
+	Slug    string `json:"slug"`
+	Version string `json:"version"`
 }
 
 type Step struct {
-	OpsManager *StepOpsManager `yaml:"opsmanager"`
-	Tile       *StepTile       `yaml:"tile"`
+	OpsManager *StepOpsManager `json:"ops-manager"`
+	Tile       *StepTile       `json:"tile"`
 }
 
 func (s Step) ResourceName() string {
@@ -27,7 +26,7 @@ func (s Step) ResourceName() string {
 
 	switch {
 	case s.OpsManager != nil:
-		name = fmt.Sprintf("opsmanager-%s", s.OpsManager.Version)
+		name = fmt.Sprintf("ops-manager-%s", s.OpsManager.Version)
 	case s.Tile != nil:
 		name = fmt.Sprintf("tile-%s-%s", s.Tile.Slug, s.Tile.Version)
 	}
@@ -37,24 +36,29 @@ func (s Step) ResourceName() string {
 	return name
 }
 
-func (s Step) AsPivnetResource() resources.PivnetResource {
+func (s Step) AsPivnetResource(env Environment) resources.PivnetResource {
 	pivnetResource := resources.PivnetResource{}
 	pivnetResource.Name = s.ResourceName()
 
 	switch {
 	case s.OpsManager != nil:
-		pivnetResource.Slug = "opsmanager"
+		pivnetResource.Slug = "ops-manager"
 		pivnetResource.Version = s.OpsManager.Version
+
+		switch env.IAAS {
+		case "gcp", "aws", "azure":
+			pivnetResource.Globs = []string{fmt.Sprintf("*%s*.yml", env.IAAS)}
+		case "openstack":
+			pivnetResource.Globs = []string{"*openstack*.raw"}
+		case "vsphere":
+			pivnetResource.Globs = []string{"*vsphere*.ova"}
+		}
 	case s.Tile != nil:
 		pivnetResource.Slug = s.Tile.Slug
 		pivnetResource.Version = s.Tile.Version
 	}
 
 	return pivnetResource
-}
-
-func (s Step) AsResourceConfig() atc.ResourceConfig {
-	return s.AsPivnetResource().AsResourceConfig()
 }
 
 type Steps []Step

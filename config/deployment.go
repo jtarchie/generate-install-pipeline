@@ -1,9 +1,11 @@
 package config
 
+type Environment struct {
+	Name string `json:"name"`
+	IAAS string `json:"iaas"`
+}
+
 type Deployment struct {
-	URI          string `yaml:"uri"`
-	Environments []struct {
-		Name string `yaml:"name"`
-		IAAS string `yaml:"iaas"`
-	} `yaml:"environments"`
+	URI          string        `json:"uri"`
+	Environments []Environment `json:"environments"`
 }

@@ -14,26 +14,43 @@ var _ = Describe("When creating pipelines", func() {
 				"--config",
 				writeFile(`
 steps:
-- opsmanager:
+- ops-manager:
     version: 2.0.0
+deployment:
+  uri: "git@github.com:user/repo"
+  environments:
+  - name: testing
+    iaas: gcp
 `),
 			)
 
 			Eventually(session).Should(gexec.Exit(0))
 
-			Expect(path(stdout, "/jobs/name=build/plan/task=create-infrastructure/config/platform")).To(Equal("linux\n"))
-			Expect(path(stdout, "/jobs/name=build/plan")).To(ContainsYAML(`
+			Expect(path(stdout, "/jobs/name=build-testing/plan/task=create-infrastructure/config/platform")).To(Equal("linux\n"))
+			Expect(path(stdout, "/jobs/name=build-testing/plan")).To(ContainsYAML(`
 - get: deployments
 - get: paving
 - get: platform-automation-image
 - get: platform-automation-tasks
-- get: opsmanager-2.0.0
+- get: ops-manager-2.0.0
 - task: create-infrastructure
+  params:
+    IAAS: gcp
+    DEPLOYMENT_NAME: testing
   ensure:
     put: deployments
+    params:
+      repository: deployments
+      rebase: true
 - task: delete-infrastructure
+  params:
+    IAAS: gcp
+    DEPLOYMENT_NAME: testing
   ensure:
     put: deployments
+    params:
+      repository: deployments
+      rebase: true
 `))
 		})
 	})

@@ -42,7 +42,7 @@ func (p Creator) platformAutomationResource() resources.PivnetResource {
 	return resources.PivnetResource{
 		Resource: resources.Resource{Name: "platform-automation"},
 		Slug:     "platform-automation",
-		Version:  ".*",
+		Version:  "*",
 	}
 }
 
@@ -82,37 +82,39 @@ func (p Creator) pavingResource() resources.GitResource {
 	}
 }
 
-func (p *Creator) setupJobDefaultGets() {
+func (p *Creator) setupJobDefaultGets(env config.Environment) {
 	p.config.Jobs = append(
 		p.config.Jobs,
 		atc.JobConfig{
-			Name:   "build",
+			Name:   fmt.Sprintf("build-%s", env.Name),
 			Serial: true,
 		},
 	)
 
-	p.config.Jobs[0].PlanSequence = append(p.config.Jobs[0].PlanSequence,
-		p.deploymentResource().AsGetStep(),
-		p.pavingResource().AsGetStep(),
-		p.platformAutomationImageResource().AsGetStep(),
-		p.platformAutomationTasksResource().AsGetStep(),
-	)
+	p.addStepToJob(p.deploymentResource().AsGetStep())
+	p.addStepToJob(p.pavingResource().AsGetStep())
+	p.addStepToJob(p.platformAutomationImageResource().AsGetStep())
+	p.addStepToJob(p.platformAutomationTasksResource().AsGetStep())
+}
+
+func (p *Creator) lastJobIndex() int {
+	return len(p.config.Jobs) - 1
 }
 
 func (p *Creator) addStepToJob(step atc.Step) {
-	p.config.Jobs[0].PlanSequence = append(
-		p.config.Jobs[0].PlanSequence,
+	p.config.Jobs[p.lastJobIndex()].PlanSequence = append(
+		p.config.Jobs[p.lastJobIndex()].PlanSequence,
 		step,
 	)
 }
 
-func (p *Creator) setupSteps() {
+func (p *Creator) setupSteps(env config.Environment) {
 	for _, step := range p.payload.Steps {
-		p.addStepToJob(step.AsPivnetResource().AsGetStep())
+		p.addStepToJob(step.AsPivnetResource(env).AsGetStep())
 
 		p.config.Resources = append(
 			p.config.Resources,
-			step.AsResourceConfig(),
+			step.AsPivnetResource(env).AsResourceConfig(),
 		)
 	}
 }
@@ -128,6 +130,10 @@ func (p *Creator) ensurePutDeployments(step atc.Step) atc.Step {
 			Hook: atc.Step{
 				Config: &atc.PutStep{
 					Name: "deployments",
+					Params: map[string]interface{}{
+						"repository": "deployments",
+						"rebase":     true,
+					},
 				},
 			},
 		},
@@ -135,15 +141,19 @@ func (p *Creator) ensurePutDeployments(step atc.Step) atc.Step {
 }
 
 //go:generate go run github.com/gobuffalo/packr/v2/packr2
-func (p *Creator) setupTasks() error {
-	createInfraTask, err := p.getTask("create-infrastructure")
+func (p *Creator) setupTasks(env config.Environment) error {
+	params := map[string]string{
+		"DEPLOYMENT_NAME": env.Name,
+		"IAAS":            env.IAAS,
+	}
+	createInfraTask, err := p.getTask("create-infrastructure", params)
 	if err != nil {
 		return fmt.Errorf("cannot create infrastructure: %w", err)
 	}
 
 	p.addStepToJob(p.ensurePutDeployments(createInfraTask))
 
-	deleteInfraTask, err := p.getTask("delete-infrastructure")
+	deleteInfraTask, err := p.getTask("delete-infrastructure", params)
 	if err != nil {
 		return fmt.Errorf("cannot delete infrastructure: %w", err)
 	}
@@ -153,7 +163,10 @@ func (p *Creator) setupTasks() error {
 	return nil
 }
 
-func (p *Creator) getTask(taskName string) (atc.Step, error) {
+func (p *Creator) getTask(
+	taskName string,
+	params map[string]string,
+) (atc.Step, error) {
 	box := packr.New("tasks", "./tasks")
 	contents, err := box.Find(fmt.Sprintf("%s.yml", taskName))
 	if err != nil {
@@ -171,24 +184,54 @@ func (p *Creator) getTask(taskName string) (atc.Step, error) {
 		Config: &atc.TaskStep{
 			Name:   taskName,
 			Config: &taskConfig,
+			Params: params,
 		},
 		UnknownFields: nil,
 	}, nil
 }
 
 func NewCreator(c config.Payload) (*Creator, error) {
+	err := validate(c)
+	if err != nil {
+		return nil, fmt.Errorf("config file incomplete: %w", err)
+	}
+
 	p := Creator{
 		payload: c,
 	}
 	p.setupResourceTypes()
 	p.setupDefaultResources()
-	p.setupJobDefaultGets()
-	p.setupSteps()
 
-	err := p.setupTasks()
-	if err != nil {
-		return nil, fmt.Errorf("could not setup tasks: %w", err)
+	for _, env := range c.Deployment.Environments {
+		p.setupJobDefaultGets(env)
+		p.setupSteps(env)
+
+		err = p.setupTasks(env)
+		if err != nil {
+			return nil, fmt.Errorf("could not setup tasks: %w", err)
+		}
 	}
 
 	return &p, nil
+}
+
+func validate(c config.Payload) error {
+	if len(c.Deployment.Environments) == 0 {
+		return fmt.Errorf("at least one environment is required from deployments.environments[]")
+	}
+
+	if c.Deployment.URI == "" {
+		return fmt.Errorf("a uri is required to read/write deployments.uri")
+	}
+
+	for index, env := range c.Deployment.Environments {
+		switch env.IAAS {
+		case "openstack", "gcp", "aws", "azure", "vsphere":
+			continue
+		default:
+			return fmt.Errorf("iaas %q unsupported in the deployment.environments[%d]", env.IAAS, index)
+		}
+	}
+
+	return nil
 }

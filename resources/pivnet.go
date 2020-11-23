@@ -16,10 +16,13 @@ type PivnetResource struct {
 }
 
 func (p PivnetResource) AsResourceConfig() atc.ResourceConfig {
+	productVersion := strings.ReplaceAll(p.Version, ".", "\\.")
+	productVersion = strings.ReplaceAll(productVersion, "*", ".*")
+
 	source := map[string]interface{}{
 		"api_token":       "((pivnet.api_token))",
 		"product_slug":    p.Slug,
-		"product_version": strings.ReplaceAll(p.Version, ".", "\\."),
+		"product_version": productVersion,
 	}
 
 	return atc.ResourceConfig{

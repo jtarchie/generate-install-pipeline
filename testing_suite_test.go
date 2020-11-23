@@ -4,7 +4,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os/exec"
-	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -78,34 +77,6 @@ var _ = Describe("When providing a configuration", func() {
 			Expect(string(stderr.Contents())).To(ContainSubstring("--config is required"))
 		})
 	})
-	When("the step is OpsManager", func() {
-		It("includes the resource", func() {
-			session, stdout, _ := run(
-				binPath,
-				"--config",
-				writeFile(`
-steps:
-- opsmanager:
-    version: 2.0.0
-`),
-			)
-
-			Eventually(session).Should(gexec.Exit(0))
-
-			By("declaring it in the resources")
-			Expect(path(stdout, "/resources/name=opsmanager-2.0.0")).To(MatchYAML(`
-name: opsmanager-2.0.0
-type: pivnet
-source:
-  api_token: ((pivnet.api_token))
-  product_slug: opsmanager
-  product_version: 2\.0\.0
-`))
-
-			By("declaring it in the job")
-			Expect(path(stdout, "/jobs/name=build/plan/get=opsmanager-2.0.0")).To(MatchYAML(`get: opsmanager-2.0.0`))
-		})
-	})
 
 	When("the step is a tile", func() {
 		It("includes the resource", func() {
@@ -117,6 +88,11 @@ steps:
 - tile:
     slug: elastic-runtime
     version: 2.0.0
+deployment:
+  uri: "git@github.com:user/repo"
+  environments:
+  - name: testing
+    iaas: gcp
 `),
 			)
 
@@ -133,7 +109,7 @@ type: pivnet
 `))
 
 			By("declaring it in the job")
-			Expect(path(stdout, "/jobs/name=build/plan/get=tile-elastic-runtime-2.0.0")).To(MatchYAML(`get: tile-elastic-runtime-2.0.0`))
+			Expect(path(stdout, "/jobs/name=build-testing/plan/get=tile-elastic-runtime-2.0.0")).To(MatchYAML(`get: tile-elastic-runtime-2.0.0`))
 		})
 	})
 
@@ -142,7 +118,13 @@ type: pivnet
 			session, stdout, _ := run(
 				binPath,
 				"--config",
-				writeFile(``),
+				writeFile(`
+deployment:
+  uri: "git@github.com:user/repo"
+  environments:
+  - name: testing
+    iaas: gcp
+`),
 			)
 
 			Eventually(session).Should(gexec.Exit(0))
@@ -151,17 +133,17 @@ name: platform-automation
 source:
   api_token: ((pivnet.api_token))
   product_slug: platform-automation
-  product_version: \.*
+  product_version: .*
 type: pivnet
 `))
-			Expect(path(stdout, "/jobs/name=build/plan/get=platform-automation-image")).To(MatchYAML(`
+			Expect(path(stdout, "/jobs/name=build-testing/plan/get=platform-automation-image")).To(MatchYAML(`
 get: platform-automation-image
 resource: platform-automation
 params:
   globs: ['*image*.tgz']
   unpack: true
 `))
-			Expect(path(stdout, "/jobs/name=build/plan/get=platform-automation-tasks")).To(MatchYAML(`
+			Expect(path(stdout, "/jobs/name=build-testing/plan/get=platform-automation-tasks")).To(MatchYAML(`
 get: platform-automation-tasks
 resource: platform-automation
 params:
@@ -174,24 +156,7 @@ source:
   uri: https://github.com/pivotal/paving
 type: git
 `))
-			Expect(path(stdout, "/jobs/name=build/plan/get=paving")).To(MatchYAML(`get: paving`))
-		})
-	})
-
-	When("using the examples", func() {
-		It("ensures they are all valid", func() {
-			examples, err := filepath.Glob("examples/*.yml")
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(len(examples)).To(BeNumerically(">", 0))
-
-			for _, example := range examples {
-				session, _, _ := run(
-					binPath,
-					"--config", example,
-				)
-				Eventually(session).Should(gexec.Exit(0))
-			}
+			Expect(path(stdout, "/jobs/name=build-testing/plan/get=paving")).To(MatchYAML(`get: paving`))
 		})
 	})
 
@@ -200,7 +165,13 @@ type: git
 			session, stdout, _ := run(
 				binPath,
 				"--config",
-				writeFile(`deployment: {uri: "git@github.com:user/repo"}`),
+				writeFile(`
+deployment:
+  uri: "git@github.com:user/repo"
+  environments:
+  - name: testing
+    iaas: gcp
+`),
 			)
 
 			Eventually(session).Should(gexec.Exit(0))
@@ -208,11 +179,11 @@ type: git
 			Expect(path(stdout, "/resources/name=deployments")).To(MatchYAML(`
 name: deployments
 source:
-  private_key: deployments.private_key
+  private_key: ((deployments.private_key))
   uri: git@github.com:user/repo
 type: git
 `))
-			Expect(path(stdout, "/jobs/name=build/plan/get=deployments")).To(MatchYAML(`get: deployments`))
+			Expect(path(stdout, "/jobs/name=build-testing/plan/get=deployments")).To(MatchYAML(`get: deployments`))
 		})
 	})
 })

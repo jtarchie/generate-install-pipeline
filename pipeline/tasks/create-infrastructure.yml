@@ -9,7 +9,7 @@ inputs:
 outputs:
 - name: deployments
 run:
-  path: bash
+  path: sh
   args:
   - -c
   - |
@@ -30,7 +30,7 @@ run:
 
     commit() {
       cp "$terraform_path"/terraform.tfstate "$deployment_path"
-      pushd "$deployment_path"
+      cd "$deployment_path"
         git config --global user.name "pipeline-bot"
         git config --global user.email "pipeline-bot@example.com"
         git add terraform.tfstate
@@ -50,7 +50,6 @@ run:
     EOL
         git add env.yml
         git commit -m "updated terraform state for $DEPLOYMENT_NAME & updated env.yml" || true
-      popd
     }
 
     trap commit EXIT

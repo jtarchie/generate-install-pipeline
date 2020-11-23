@@ -23,7 +23,7 @@ func (g GitResource) AsResourceConfig() atc.ResourceConfig {
 	}
 
 	if strings.HasPrefix(g.URI, "git@") {
-		source["private_key"] = fmt.Sprintf("%s.private_key", g.Name)
+		source["private_key"] = fmt.Sprintf("((%s.private_key))", g.Name)
 	}
 
 	return atc.ResourceConfig{
