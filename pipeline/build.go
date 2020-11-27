@@ -72,6 +72,7 @@ func (p Creator) deploymentResource() resources.GitResource {
 	return resources.GitResource{
 		Resource: resources.Resource{Name: "deployments"},
 		URI:      p.payload.Deployment.URI,
+		Branch:   p.payload.Deployment.Branch,
 	}
 }
 
@@ -142,18 +143,32 @@ func (p *Creator) ensurePutDeployments(step atc.Step) atc.Step {
 
 //go:generate go run github.com/gobuffalo/packr/v2/packr2
 func (p *Creator) setupTasks(env config.Environment) error {
-	params := map[string]string{
+	createInfraTask, err := p.getTask("create-infrastructure", map[string]string{
 		"DEPLOYMENT_NAME": env.Name,
 		"IAAS":            env.IAAS,
-	}
-	createInfraTask, err := p.getTask("create-infrastructure", params)
+	}, "")
 	if err != nil {
 		return fmt.Errorf("cannot create infrastructure: %w", err)
 	}
 
 	p.addStepToJob(p.ensurePutDeployments(createInfraTask))
 
-	deleteInfraTask, err := p.getTask("delete-infrastructure", params)
+	createEnvTask, err := p.getTask("create-env", map[string]string{
+		"DEPLOYMENT_NAME": env.Name,
+		"OM_USERNAME":     "((om.username))",
+		"OM_PASSWORD":     "((om.password))",
+	}, "platform-automation-image")
+	if err != nil {
+		return fmt.Errorf("cannot create env: %w", err)
+	}
+
+	p.addStepToJob(p.ensurePutDeployments(createEnvTask))
+	p.addStepToJob(p.addPATask("prepare-tasks-with-secrets"))
+
+	deleteInfraTask, err := p.getTask("delete-infrastructure", map[string]string{
+		"DEPLOYMENT_NAME": env.Name,
+		"IAAS":            env.IAAS,
+	}, "")
 	if err != nil {
 		return fmt.Errorf("cannot delete infrastructure: %w", err)
 	}
@@ -166,8 +181,10 @@ func (p *Creator) setupTasks(env config.Environment) error {
 func (p *Creator) getTask(
 	taskName string,
 	params map[string]string,
+	imageName string,
 ) (atc.Step, error) {
 	box := packr.New("tasks", "./tasks")
+
 	contents, err := box.Find(fmt.Sprintf("%s.yml", taskName))
 	if err != nil {
 		return atc.Step{}, fmt.Errorf("could not load task %s.yml: %w", taskName, err)
@@ -180,14 +197,31 @@ func (p *Creator) getTask(
 		return atc.Step{}, fmt.Errorf("could not unmarshal task %s.yml: %w", taskName, err)
 	}
 
+	task := &atc.TaskStep{
+		Name:   taskName,
+		Config: &taskConfig,
+		Params: params,
+	}
+
+	if imageName != "" {
+		task.ImageArtifactName = imageName
+	}
+
 	return atc.Step{
-		Config: &atc.TaskStep{
-			Name:   taskName,
-			Config: &taskConfig,
-			Params: params,
-		},
-		UnknownFields: nil,
+		Config: task,
 	}, nil
+}
+
+func (p *Creator) addPATask(taskName string) atc.Step {
+	task := &atc.TaskStep{
+		Name:              taskName,
+		ImageArtifactName: "platform-automation-image",
+		ConfigPath:        fmt.Sprintf("platform-automation-tasks/tasks/%s.yml", taskName),
+	}
+
+	return atc.Step{
+		Config:        task,
+	}
 }
 
 func NewCreator(c config.Payload) (*Creator, error) {
@@ -222,6 +256,10 @@ func validate(c config.Payload) error {
 
 	if c.Deployment.URI == "" {
 		return fmt.Errorf("a uri is required to read/write deployments.uri")
+	}
+
+	if c.Deployment.Branch == "" {
+		return fmt.Errorf("a branch is required to read/write deployments.branch")
 	}
 
 	for index, env := range c.Deployment.Environments {

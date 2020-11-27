@@ -1,0 +1,10 @@
+---
+steps:
+- ops-manager:
+    version: 2.9.*
+deployment:
+  uri: git@github.com:pivotal/platform-automation-deployments
+  branch: main
+  environments:
+  - name: ci-support
+    iaas: gcp

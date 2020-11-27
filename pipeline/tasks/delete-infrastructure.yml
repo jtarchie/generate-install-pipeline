@@ -8,23 +8,26 @@ inputs:
 - name: paving
 outputs:
 - name: deployments
+caches:
+- path: .terraform.d
 run:
   path: sh
   args:
   - -c
   - |
-
     set -eux
+
+    export TF_PLUGIN_CACHE_DIR=$PWD/.terraform.d/plugin-cache
 
     terraform_path="$PWD"/paving/"$IAAS"
     deployment_path="$PWD"/deployments/"$DEPLOYMENT_NAME"
 
-    if [ -e "$terraform_path" ]; then
+    if [ ! -d "$terraform_path" ]; then
       echo "Please provide a valid IAAS, the '$IAAS' is not supported"
       exit 1
     fi
 
-    if [ -e "$deployment_path" ]; then
+    if [ ! -d "$deployment_path" ]; then
       echo "Please provide a valid DEPLOYMENT_NAME, the '$DEPLOYMENT_NAME' is not supported"
       exit 1
     fi

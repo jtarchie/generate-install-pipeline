@@ -8,4 +8,5 @@ type Environment struct {
 type Deployment struct {
 	URI          string        `json:"uri"`
 	Environments []Environment `json:"environments"`
+	Branch       string        `json:"branch"`
 }

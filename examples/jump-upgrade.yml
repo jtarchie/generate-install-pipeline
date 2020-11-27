@@ -13,6 +13,7 @@ steps:
     version: 2.10.*
 deployment:
   uri: git@github.com:pivotal/platform-automation-deployments
+  branch: main
   environments:
   - name: ci-support
     iaas: gcp

@@ -18,6 +18,7 @@ steps:
     version: 2.0.0
 deployment:
   uri: "git@github.com:user/repo"
+  branch: main
   environments:
   - name: testing
     iaas: gcp
@@ -42,15 +43,27 @@ deployment:
     params:
       repository: deployments
       rebase: true
-- task: delete-infrastructure
-  params:
-    IAAS: gcp
-    DEPLOYMENT_NAME: testing
+- task: create-env
   ensure:
     put: deployments
-    params:
-      repository: deployments
-      rebase: true
+- task: prepare-tasks-with-secrets
+  file: platform-automation-tasks/tasks/prepare-tasks-with-secrets.yml
+- task: create-vm-ops-manager-2.0.0
+  file: platform-automation-tasks/tasks/create-vm.yml
+  ensure:
+    task: state-file
+- task: configure-authentication
+  file: platform-automation-tasks/tasks/configure-authentication.yml
+- task: configure-director
+  file: platform-automation-tasks/tasks/configure-directory.yml
+- task: apply-changes
+  file: platform-automation-tasks/tasks/apply-changes.yml
+- task: delete-installation
+  file: platform-automation-tasks/tasks/delete-installation.yml
+- task: delete-vm
+- task: delete-infrastructure
+  ensure:
+    put: deployments
 `))
 		})
 	})
