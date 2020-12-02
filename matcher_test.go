@@ -23,6 +23,7 @@ var _ = Describe("ContainsYAML", func() {
 	It("supports nested values", func() {
 		Expect(`{a: {b: 2, c: 3}, d: 4}`).To(ContainsYAML(`{a: {b: 2}}`))
 		Expect(`{a: {b: 2, c: 3}, d: 4}`).ToNot(ContainsYAML(`{a: {b: 1}}`))
+		Expect(`{a: {b: 2, c: 3}, d: 4}`).ToNot(ContainsYAML(`b: 2`))
 	})
 })
 
