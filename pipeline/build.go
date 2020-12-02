@@ -220,7 +220,7 @@ func (p *Creator) addPATask(taskName string) atc.Step {
 	}
 
 	return atc.Step{
-		Config:        task,
+		Config: task,
 	}
 }
 
